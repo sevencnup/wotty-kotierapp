@@ -67,19 +67,19 @@ app.innerHTML = `
     <section class="feature-strip" id="features">
       <div class="shell feature-grid">
         <article class="feature-item">
-          <div class="feature-icon icon-shield">✓</div>
+          <div class="feature-icon icon-shield" aria-hidden="true"><span class="shape-shield">✓</span></div>
           <div><h2>安全可靠</h2><p>多重加密传输，保障数据安全，让访问更安心。</p></div>
         </article>
         <article class="feature-item">
-          <div class="feature-icon icon-bolt">↯</div>
+          <div class="feature-icon icon-bolt" aria-hidden="true"><span class="shape-bolt"></span></div>
           <div><h2>高速稳定</h2><p>全球优质节点加速，智能路由，保证低延迟访问。</p></div>
         </article>
         <article class="feature-item">
-          <div class="feature-icon icon-grid">四</div>
+          <div class="feature-icon icon-grid" aria-hidden="true"><span class="shape-grid"><i></i><i></i><i></i><i></i></span></div>
           <div><h2>多平台支持</h2><p>支持 Windows、macOS、Linux、Android 等多平台。</p></div>
         </article>
         <article class="feature-item">
-          <div class="feature-icon icon-cloud">↑</div>
+          <div class="feature-icon icon-cloud" aria-hidden="true"><span class="shape-cloud">↑</span></div>
           <div><h2>简单易用</h2><p>可视化界面，一键配置，新手也能快速上手。</p></div>
         </article>
       </div>
@@ -95,22 +95,22 @@ app.innerHTML = `
         <div class="flow-diagram">
           <article class="flow-card">
             <span class="flow-kicker">INTRANET</span>
-            <div class="flow-visual device-visual"><span>▣</span><span>▤</span><span>▥</span></div>
+            <div class="flow-visual device-visual" aria-hidden="true"><span class="device-chip phone-chip"></span><span class="device-chip monitor-chip"></span><span class="device-chip server-chip"></span></div>
             <h3>内网设备</h3><p>10.0.0.0/8</p>
           </article>
-          <div class="flow-link"><span class="lock">⌑</span><i></i><b>›</b></div>
+          <div class="flow-link"><span class="lock" aria-hidden="true"><i></i></span><i></i><b>›</b></div>
           <article class="flow-card flow-card-client">
             <span class="flow-kicker">CLIENT</span>
             <div class="flow-visual client-visual"><span class="brand-mark small"><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
             <h3>Kotier 客户端</h3><p>身份认证 · 加密连接</p>
           </article>
-          <div class="flow-link"><span class="lock">⌑</span><i></i><b>›</b></div>
+          <div class="flow-link"><span class="lock" aria-hidden="true"><i></i></span><i></i><b>›</b></div>
           <article class="flow-card flow-card-node">
             <span class="flow-kicker">RELAY NODE</span>
-            <div class="flow-visual node-visual"><span class="node-cloud">☁</span><span class="node-stack">▤</span></div>
+            <div class="flow-visual node-visual" aria-hidden="true"><span class="node-cloud"></span><span class="node-stack"></span></div>
             <h3>中转节点</h3><p>智能路由 · 稳定加速</p>
           </article>
-          <div class="flow-link"><span class="lock">⌑</span><i></i><b>›</b></div>
+          <div class="flow-link"><span class="lock" aria-hidden="true"><i></i></span><i></i><b>›</b></div>
           <article class="flow-card">
             <span class="flow-kicker">INTERNET</span>
             <div class="flow-visual web-visual"><span>◎</span></div>
@@ -129,16 +129,16 @@ app.innerHTML = `
         </div>
         <div class="platform-grid">
           <article class="platform-card">
-            <div class="platform-logo windows-logo">⊞</div><div><h3>Windows</h3><p>Windows 7 及以上</p><a href="#pricing" data-feedback="Windows 客户端下载即将开放">下载客户端 <span>→</span></a></div>
+            <div class="platform-logo windows-logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div><h3>Windows</h3><p>Windows 7 及以上</p><a href="#pricing" data-feedback="Windows 客户端下载即将开放">下载客户端 <span>→</span></a></div>
           </article>
           <article class="platform-card">
-            <div class="platform-logo apple-logo">●</div><div><h3>macOS</h3><p>macOS 10.12 及以上</p><a href="#pricing" data-feedback="macOS 客户端下载即将开放">下载客户端 <span>→</span></a></div>
+            <div class="platform-logo apple-logo" aria-hidden="true"><i></i></div><div><h3>macOS</h3><p>macOS 10.12 及以上</p><a href="#pricing" data-feedback="macOS 客户端下载即将开放">下载客户端 <span>→</span></a></div>
           </article>
           <article class="platform-card">
-            <div class="platform-logo linux-logo">▲</div><div><h3>Linux</h3><p>主流发行版支持</p><a href="#pricing" data-feedback="Linux 客户端下载即将开放">下载客户端 <span>→</span></a></div>
+            <div class="platform-logo linux-logo" aria-hidden="true">&gt;_</div><div><h3>Linux</h3><p>主流发行版支持</p><a href="#pricing" data-feedback="Linux 客户端下载即将开放">下载客户端 <span>→</span></a></div>
           </article>
           <article class="platform-card">
-            <div class="platform-logo android-logo">♟</div><div><h3>Android</h3><p>Android 5.0 及以上</p><a href="#pricing" data-feedback="Android 客户端下载即将开放">下载客户端 <span>→</span></a></div>
+            <div class="platform-logo android-logo" aria-hidden="true"><i></i></div><div><h3>Android</h3><p>Android 5.0 及以上</p><a href="#pricing" data-feedback="Android 客户端下载即将开放">下载客户端 <span>→</span></a></div>
           </article>
         </div>
       </div>
@@ -167,6 +167,7 @@ app.innerHTML = `
 `
 
 const toast = document.querySelector<HTMLDivElement>('.toast')
+const siteHeader = document.querySelector<HTMLElement>('.site-header')
 let toastTimer: number | undefined
 
 function showToast(message: string) {
@@ -193,8 +194,23 @@ document.querySelectorAll<HTMLElement>('[data-download]').forEach((button) => {
 const menuToggle = document.querySelector<HTMLButtonElement>('.menu-toggle')
 const mainNav = document.querySelector<HTMLElement>('.main-nav')
 
+function closeMenu() {
+  mainNav?.classList.remove('is-open')
+  menuToggle?.classList.remove('is-open')
+  menuToggle?.setAttribute('aria-expanded', 'false')
+  menuToggle?.setAttribute('aria-label', '打开导航')
+}
+
+function syncHeader() {
+  siteHeader?.classList.toggle('is-scrolled', window.scrollY > 18)
+}
+
+syncHeader()
+window.addEventListener('scroll', syncHeader, { passive: true })
+
 menuToggle?.addEventListener('click', () => {
   const isOpen = mainNav?.classList.toggle('is-open') ?? false
+  menuToggle.classList.toggle('is-open', isOpen)
   menuToggle.setAttribute('aria-expanded', String(isOpen))
   menuToggle.setAttribute('aria-label', isOpen ? '关闭导航' : '打开导航')
 })
@@ -203,9 +219,22 @@ document.querySelectorAll<HTMLAnchorElement>('.nav-link').forEach((link) => {
   link.addEventListener('click', () => {
     document.querySelectorAll('.nav-link').forEach((item) => item.classList.remove('is-active'))
     link.classList.add('is-active')
-    mainNav?.classList.remove('is-open')
-    menuToggle?.setAttribute('aria-expanded', 'false')
+    closeMenu()
   })
+})
+
+document.addEventListener('click', (event) => {
+  if (!mainNav?.classList.contains('is-open')) return
+  const target = event.target as Node
+  if (!mainNav.contains(target) && !menuToggle?.contains(target)) closeMenu()
+})
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeMenu()
+})
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 780) closeMenu()
 })
 
 const sections = document.querySelectorAll<HTMLElement>('main section[id]')
