@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.sp
 import com.easytier.data.PublicNode
 import com.easytier.data.ServerEntry
 import com.easytier.service.PublicNodeService
+import com.easytier.service.ServerConnectivityResult
+import com.easytier.service.ServerConnectivityStatus
+import com.easytier.service.ServerConnectivityTester
 import com.easytier.service.SettingsRepository
 import com.easytier.ui.components.AppDialog
 import com.easytier.ui.components.AppIcon
@@ -59,6 +62,8 @@ fun ServersPage() {
     if (showAddDialog) {
         var name by remember { mutableStateOf("") }
         var url by remember { mutableStateOf("") }
+        var isTestingConnectivity by remember { mutableStateOf(false) }
+        var connectivityResult by remember { mutableStateOf<ServerConnectivityResult?>(null) }
 
         AppDialog(
             title = "添加服务器",
@@ -86,12 +91,77 @@ fun ServersPage() {
             )
             OutlinedTextField(
                 value = url,
-                onValueChange = { url = it },
+                onValueChange = {
+                    url = it
+                    connectivityResult = null
+                },
                 label = { Text("服务器地址") },
                 placeholder = { Text("wss://example.com") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+            OutlinedButton(
+                onClick = {
+                    isTestingConnectivity = true
+                    connectivityResult = null
+                    scope.launch {
+                        try {
+                            connectivityResult = ServerConnectivityTester.test(url)
+                        } finally {
+                            isTestingConnectivity = false
+                        }
+                    }
+                },
+                enabled = url.isNotBlank() && !isTestingConnectivity,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                if (isTestingConnectivity) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("测试中…", fontSize = 13.sp)
+                } else {
+                    AppIcon(AppIcons.MonitorHeart, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("测试连通性", fontSize = 13.sp)
+                }
+            }
+            connectivityResult?.let { result ->
+                val resultColor = when (result.status) {
+                    ServerConnectivityStatus.SUCCESS -> Color(0xFF2E7D32)
+                    ServerConnectivityStatus.WARNING -> Color(0xFFB26A00)
+                    ServerConnectivityStatus.FAILURE -> MaterialTheme.colorScheme.error
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    AppIcon(
+                        if (result.status == ServerConnectivityStatus.SUCCESS) {
+                            AppIcons.CheckCircle
+                        } else {
+                            AppIcons.CloudOff
+                        },
+                        contentDescription = null,
+                        tint = resultColor,
+                        modifier = Modifier
+                            .padding(top = 1.dp)
+                            .size(17.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = result.message,
+                        color = resultColor,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                    )
+                }
+            }
         }
     }
 
