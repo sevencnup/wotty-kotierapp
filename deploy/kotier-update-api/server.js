@@ -192,13 +192,31 @@ async function buildVersionInfo(req) {
   const { release, apk, filename, versionCode } = await getLatestReleaseInfo();
   await ensureCached(apk);
   const origin = getPublicOrigin(req);
+  const downloadUrl = `${origin}/download/${encodeURIComponent(filename)}`;
   return {
     latest_version: String(release.tag_name).replace(/^v/i, ''),
     latest_version_code: versionCode,
-    download_url: `${origin}/download/${encodeURIComponent(filename)}`,
+    download_url: downloadUrl,
     source_download_url: apk.browser_download_url,
-    release_notes: typeof release.body === 'string' ? release.body : '',
+    // 4245 客户端只读取前 500 个字符，下载地址必须放在最前面。
+    // 使用纯文本 URL，旧版客户端没有 Markdown 链接点击处理，但用户可以直接复制。
+    release_notes: buildCompactReleaseNotes(downloadUrl),
   };
+}
+
+function buildCompactReleaseNotes(downloadUrl) {
+  return [
+    `下载地址：${downloadUrl}`,
+    '',
+    '本次更新：',
+    '- 更换 Kotier 图标。',
+    '- 节点列表支持三点菜单，可单独选择设备图标。',
+    '- 更新弹窗提供下载入口。',
+    '- 项目网站：https://kotier.wotty.app',
+    '- 使用正式签名并改进更新识别与缓存。',
+    '',
+    '如果遇到签名不一致，请手动下载安装包并更新。',
+  ].join('\n');
 }
 
 async function getCurrentAssetName() {
