@@ -1,5 +1,7 @@
 package com.easytier.ui.pages
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -15,8 +17,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -52,6 +56,8 @@ fun SettingsPage(onNavigateToLog: (() -> Unit)? = null) {
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableIntStateOf(0) }
+    val updateNotesScrollState = rememberScrollState()
+    var updateNotesViewportHeightPx by remember { mutableIntStateOf(0) }
 
     // 贡献者数据
     var contributors by remember { mutableStateOf<List<Contributor>>(emptyList()) }
@@ -97,6 +103,13 @@ fun SettingsPage(onNavigateToLog: (() -> Unit)? = null) {
                 Toast.makeText(context, "无法打开浏览器下载链接", Toast.LENGTH_LONG).show()
             }
         }
+        val copyDownloadUrl = {
+            val clipboard = context.getSystemService(ClipboardManager::class.java)
+            clipboard?.setPrimaryClip(
+                ClipData.newPlainText("Kotier APK 下载地址", info.downloadUrl)
+            )
+            Toast.makeText(context, "下载链接已复制", Toast.LENGTH_SHORT).show()
+        }
         AppDialog(
             title = "发现新版本 v${info.latestVersion}",
             onDismissRequest = { showUpdateDialog = false },
@@ -116,50 +129,114 @@ fun SettingsPage(onNavigateToLog: (() -> Unit)? = null) {
                 }
             },
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 260.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .heightIn(min = 120.dp, max = 280.dp)
+                    .onSizeChanged { updateNotesViewportHeightPx = it.height },
             ) {
-                UpdateNotesText(
-                    text = info.releaseNotes.ifEmpty { "暂无更新说明" },
-                    onOpenUrl = { url ->
-                        try {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "无法打开链接", Toast.LENGTH_LONG).show()
-                        }
-                    },
-                )
-                Spacer(Modifier.height(2.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(updateNotesScrollState)
+                        .padding(end = 12.dp),
+                ) {
+                    UpdateNotesText(
+                        text = info.releaseNotes.ifEmpty { "暂无更新说明" },
+                        onOpenUrl = { url ->
+                            try {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "无法打开链接", Toast.LENGTH_LONG).show()
+                            }
+                        },
+                    )
+                }
+
+                if (updateNotesScrollState.maxValue > 0 && updateNotesViewportHeightPx > 0) {
+                    val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                    val thumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight()
+                            .width(6.dp)
+                            .padding(vertical = 4.dp)
+                            .drawBehind {
+                                val viewportHeight = size.height
+                                val maxScroll = updateNotesScrollState.maxValue.toFloat()
+                                val thumbHeight = (
+                                    viewportHeight * viewportHeight /
+                                        (viewportHeight + maxScroll)
+                                    ).coerceAtLeast(24.dp.toPx()).coerceAtMost(viewportHeight)
+                                val thumbTop = (
+                                    viewportHeight - thumbHeight
+                                    ) * (updateNotesScrollState.value / maxScroll)
+                                drawRoundRect(
+                                    color = trackColor,
+                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width / 2f),
+                                )
+                                drawRoundRect(
+                                    color = thumbColor,
+                                    topLeft = androidx.compose.ui.geometry.Offset(0f, thumbTop),
+                                    size = androidx.compose.ui.geometry.Size(size.width, thumbHeight),
+                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width / 2f),
+                                )
+                            },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedButton(
                     onClick = openDownloadUrl,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
-                ) {
-                    Text("点击浏览器下载 APK", fontSize = 13.sp)
-                }
-                Text(
-                    text = "下载地址（点击可打开）",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = openDownloadUrl),
-                    shape = RoundedCornerShape(7.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        .weight(1f)
+                        .heightIn(min = 48.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                 ) {
-                    SelectionContainer {
-                        Text(
-                            text = info.downloadUrl.replace("/", "/\u200B"),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
+                    Text("浏览器下载", fontSize = 12.sp)
+                }
+                OutlinedButton(
+                    onClick = copyDownloadUrl,
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                ) {
+                    AppIcon(
+                        AppIcons.Copy,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("复制链接", fontSize = 12.sp)
+                }
+            }
+            Text(
+                text = "下载地址（点击可打开，也可以复制）",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = openDownloadUrl),
+                shape = RoundedCornerShape(7.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+            ) {
+                SelectionContainer {
+                    Text(
+                        text = info.downloadUrl.replace("/", "/\u200B"),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
         }
