@@ -60,6 +60,14 @@ class EasyTierVpnService : VpnService() {
         val prefix = intent.getIntExtra("prefix", 24)
         val extraRoutes = intent.getStringArrayListExtra("routes") ?: arrayListOf()
 
+        if (ipv4.isBlank()) {
+            Log.e(TAG, "refusing to start VPN without an IPv4 address: " + instanceName)
+            LogService.error("拒绝启动 VPN：缺少本机 IPv4 地址，instance=" + instanceName, source = TAG)
+            runningInstanceName = null
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+
         Log.i(TAG, "starting VPN: $instanceName @ $ipv4/$prefix routes=$extraRoutes")
         LogService.info("启动 VPN: $instanceName @ $ipv4/$prefix routes=$extraRoutes", source = TAG)
 

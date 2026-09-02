@@ -28,8 +28,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-val appVersionCode = 4068
-val appVersionName = "4.2.46"
+val appVersionCode = 4069
+val appVersionName = "4.2.47"
 
 base {
     archivesName.set("kotier-v${appVersionName}-${appVersionCode}")
@@ -93,6 +93,8 @@ android {
 
 dependencies {
     implementation(project(":backend"))
+
+    testImplementation("junit:junit:4.13.2")
 
     // Compose BOM
     val composeBom = platform("androidx.compose:compose-bom:2024.02.00")

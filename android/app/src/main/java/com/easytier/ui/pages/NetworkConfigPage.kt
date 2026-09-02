@@ -142,8 +142,20 @@ fun NetworkConfigPage() {
         startPendingConfig = null; startPendingIp = ""; startPendingRoutes = emptyList()
         if (result.resultCode == Activity.RESULT_OK) {
             android.util.Log.i("NetworkConfig", "VPN OK, IP=$assignedIp, routes=$routes")
-            EasyTierService.startVpnService(context, config.instanceName,
-                assignedIp.ifEmpty { NetworkConfig.vpnIpv4Address(config.ipv4).ifEmpty { "10.144.144.1" } }, 24, routes)
+            val vpnIpv4 = resolveVpnIpv4(config, assignedIp)
+            if (vpnIpv4.isBlank()) {
+                scope.launch {
+                    EasyTierService.stopNetwork(config.instanceName)
+                }
+                config.isRunning = false
+                isRunning = false
+                forceRecompose()
+                showToast("未获取到真实虚拟 IP，已取消启动")
+                isLoading = false
+                isStopping = false
+                return@rememberLauncherForActivityResult
+            }
+            EasyTierService.startVpnService(context, config.instanceName, vpnIpv4, 24, routes)
             isRunning = true
             config.isRunning = true
             forceRecompose()

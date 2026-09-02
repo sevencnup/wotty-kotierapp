@@ -1316,7 +1316,7 @@ private fun DashboardScreen(
     }
 }
 
-private suspend fun startVpnForConfig(context: Activity, cfg: NetworkConfig) {
+private suspend fun startVpnForConfig(context: Activity, cfg: NetworkConfig): Boolean {
     var assignedIp = if (!cfg.dhcp && cfg.ipv4.isNotBlank()) {
         NetworkConfig.vpnIpv4Address(cfg.ipv4)
     } else {
@@ -1339,14 +1339,37 @@ private suspend fun startVpnForConfig(context: Activity, cfg: NetworkConfig) {
         delay(300)
     }
 
-    LogService.info("主页启动 VPN: instance=${cfg.instanceName}, ip=$assignedIp, routes=$routes", source = "HomePage")
+    val vpnIpv4 = resolveVpnIpv4(cfg, assignedIp)
+    if (vpnIpv4.isBlank()) {
+        val stopResult = EasyTierService.stopNetwork(cfg.instanceName)
+        EasyTierService.refreshRuntimeState()
+        if (!stopResult.success) {
+            LogService.warn(
+                "未拿到虚拟 IP，回滚实例失败: " + stopResult.errorMessage,
+                source = "HomePage",
+            )
+        }
+        LogService.warn(
+            "未拿到本机虚拟 IP，取消主页 VPN 启动: instance=" + cfg.instanceName,
+            source = "HomePage",
+        )
+        Toast.makeText(
+            context,
+            "未拿到本机虚拟 IP，请检查 DHCP/静态 IP、网络名称和入口服务器后重试",
+            Toast.LENGTH_LONG,
+        ).show()
+        return false
+    }
+
+    LogService.info("主页启动 VPN: instance=" + cfg.instanceName + ", ip=" + vpnIpv4 + ", routes=" + routes, source = "HomePage")
     EasyTierService.startVpnService(
         context,
         cfg.instanceName,
-        assignedIp.ifBlank { NetworkConfig.vpnIpv4Address(cfg.ipv4).ifBlank { "10.144.144.1" } },
+        vpnIpv4,
         24,
         routes,
     )
+    return true
 }
 
 @Composable
