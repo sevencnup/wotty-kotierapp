@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +23,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -58,6 +61,9 @@ fun SettingsPage(onNavigateToLog: (() -> Unit)? = null) {
     var downloadProgress by remember { mutableIntStateOf(0) }
     val updateNotesScrollState = rememberScrollState()
     var updateNotesViewportHeightPx by remember { mutableIntStateOf(0) }
+    val updateDialogHeight = (LocalConfiguration.current.screenHeightDp - 32)
+        .coerceIn(280, 720)
+        .dp
 
     // 贡献者数据
     var contributors by remember { mutableStateOf<List<Contributor>>(emptyList()) }
@@ -110,133 +116,175 @@ fun SettingsPage(onNavigateToLog: (() -> Unit)? = null) {
             )
             Toast.makeText(context, "下载链接已复制", Toast.LENGTH_SHORT).show()
         }
-        AppDialog(
-            title = "发现新版本 v${info.latestVersion}",
+        Dialog(
             onDismissRequest = { showUpdateDialog = false },
-            confirmText = if (isDownloading) "下载中 ${downloadProgress}%" else "下载更新",
-            confirmEnabled = !isDownloading,
-            onConfirm = {
-                isDownloading = true
-                scope.launch {
-                    val err = UpdateChecker(context).downloadAndInstall(info) { pct ->
-                        downloadProgress = pct
-                    }
-                    isDownloading = false
-                    showUpdateDialog = false
-                    if (err != null) {
-                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
-                    }
-                }
-            },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
         ) {
-            Box(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 120.dp, max = 280.dp)
-                    .onSizeChanged { updateNotesViewportHeightPx = it.height },
+                    .padding(horizontal = 16.dp)
+                    .height(updateDialogHeight),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp,
+                shadowElevation = 16.dp,
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(updateNotesScrollState)
-                        .padding(end = 12.dp),
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    UpdateNotesText(
-                        text = info.releaseNotes.ifEmpty { "暂无更新说明" },
-                        onOpenUrl = { url ->
-                            try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "无法打开链接", Toast.LENGTH_LONG).show()
-                            }
-                        },
+                    Text(
+                        text = "发现新版本 v${info.latestVersion}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
-                }
 
-                if (updateNotesScrollState.maxValue > 0 && updateNotesViewportHeightPx > 0) {
-                    val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                    val thumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)
                     Box(
                         modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .fillMaxHeight()
-                            .width(6.dp)
-                            .padding(vertical = 4.dp)
-                            .drawBehind {
-                                val viewportHeight = size.height
-                                val maxScroll = updateNotesScrollState.maxValue.toFloat()
-                                val thumbHeight = (
-                                    viewportHeight * viewportHeight /
-                                        (viewportHeight + maxScroll)
-                                    ).coerceAtLeast(24.dp.toPx()).coerceAtMost(viewportHeight)
-                                val thumbTop = (
-                                    viewportHeight - thumbHeight
-                                    ) * (updateNotesScrollState.value / maxScroll)
-                                drawRoundRect(
-                                    color = trackColor,
-                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width / 2f),
-                                )
-                                drawRoundRect(
-                                    color = thumbColor,
-                                    topLeft = androidx.compose.ui.geometry.Offset(0f, thumbTop),
-                                    size = androidx.compose.ui.geometry.Size(size.width, thumbHeight),
-                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width / 2f),
-                                )
-                            },
-                    )
-                }
-            }
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .onSizeChanged { updateNotesViewportHeightPx = it.height },
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(updateNotesScrollState)
+                                .padding(end = 14.dp),
+                        ) {
+                            UpdateNotesText(
+                                text = info.releaseNotes.ifEmpty { "暂无更新说明" },
+                                onOpenUrl = { url ->
+                                    try {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "无法打开链接", Toast.LENGTH_LONG).show()
+                                    }
+                                },
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = "↑↓ 可上下滑动查看完整更新内容",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
 
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    onClick = openDownloadUrl,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                ) {
-                    Text("浏览器下载", fontSize = 12.sp)
-                }
-                OutlinedButton(
-                    onClick = copyDownloadUrl,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                ) {
-                    AppIcon(
-                        AppIcons.Copy,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text("复制链接", fontSize = 12.sp)
-                }
-            }
-            Text(
-                text = "下载地址（点击可打开，也可以复制）",
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = openDownloadUrl),
-                shape = RoundedCornerShape(7.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-            ) {
-                SelectionContainer {
+                        if (updateNotesScrollState.maxValue > 0 && updateNotesViewportHeightPx > 0) {
+                            val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                            val thumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .fillMaxHeight()
+                                    .width(6.dp)
+                                    .padding(vertical = 4.dp)
+                                    .drawBehind {
+                                        val viewportHeight = size.height
+                                        val maxScroll = updateNotesScrollState.maxValue.toFloat()
+                                        val thumbHeight = (
+                                            viewportHeight * viewportHeight /
+                                                (viewportHeight + maxScroll)
+                                            ).coerceAtLeast(24.dp.toPx()).coerceAtMost(viewportHeight)
+                                        val thumbTop = (
+                                            viewportHeight - thumbHeight
+                                            ) * (updateNotesScrollState.value / maxScroll)
+                                        drawRoundRect(
+                                            color = trackColor,
+                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width / 2f),
+                                        )
+                                        drawRoundRect(
+                                            color = thumbColor,
+                                            topLeft = androidx.compose.ui.geometry.Offset(0f, thumbTop),
+                                            size = androidx.compose.ui.geometry.Size(size.width, thumbHeight),
+                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width / 2f),
+                                        )
+                                    },
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = openDownloadUrl,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 44.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                        ) {
+                            Text("浏览器下载", fontSize = 12.sp)
+                        }
+                        OutlinedButton(
+                            onClick = copyDownloadUrl,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 44.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                        ) {
+                            AppIcon(
+                                AppIcons.Copy,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text("复制链接", fontSize = 12.sp)
+                        }
+                    }
                     Text(
-                        text = info.downloadUrl.replace("/", "/\u200B"),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+                        text = "下载地址（点击可打开，也可以复制）",
                         fontSize = 11.sp,
-                        lineHeight = 16.sp,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = openDownloadUrl),
+                        shape = RoundedCornerShape(7.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                    ) {
+                        SelectionContainer {
+                            Text(
+                                text = info.downloadUrl.replace("/", "/\u200B"),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        TextButton(onClick = { showUpdateDialog = false }) {
+                            Text("取消", fontSize = 13.sp)
+                        }
+                        Button(
+                            onClick = {
+                                isDownloading = true
+                                scope.launch {
+                                    val err = UpdateChecker(context).downloadAndInstall(info) { pct ->
+                                        downloadProgress = pct
+                                    }
+                                    isDownloading = false
+                                    showUpdateDialog = false
+                                    if (err != null) {
+                                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            },
+                            enabled = !isDownloading,
+                            shape = RoundedCornerShape(999.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp),
+                        ) {
+                            Text(if (isDownloading) "下载中 ${downloadProgress}%" else "下载更新", fontSize = 13.sp)
+                        }
+                    }
                 }
             }
         }
@@ -461,22 +509,20 @@ private fun UpdateNotesText(text: String, onOpenUrl: (String) -> Unit) {
         append(text.substring(cursor))
     }
 
-    SelectionContainer {
-        ClickableText(
-            text = annotated,
-            modifier = Modifier.fillMaxWidth(),
-            style = LocalTextStyle.current.copy(
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-            onClick = { offset ->
-                annotated
-                    .getStringAnnotations(UPDATE_URL_ANNOTATION, offset, offset)
-                    .firstOrNull()
-                    ?.let { onOpenUrl(it.item) }
-            },
-        )
-    }
+    ClickableText(
+        text = annotated,
+        modifier = Modifier.fillMaxWidth(),
+        style = LocalTextStyle.current.copy(
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+        onClick = { offset ->
+            annotated
+                .getStringAnnotations(UPDATE_URL_ANNOTATION, offset, offset)
+                .firstOrNull()
+                ?.let { onOpenUrl(it.item) }
+        },
+    )
 }
 
 @Composable
