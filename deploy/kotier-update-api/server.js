@@ -8,13 +8,14 @@ const REPO = 'sevencnup/wotty-kotierapp';
 const PORT = 8080;
 const CACHE_TTL_MS = 60_000;
 const CACHE_DIR = process.env.KOTIER_APK_CACHE_DIR || '/data/apk';
-const DEFAULT_ORIGIN = 'https://kotier.wotty.app';
-const OLD_ORIGIN = 'https://kotier.openstars.org';
+// 旧版客户端仍可能从历史兼容入口请求版本信息；所有对外展示和
+// 下载链接均统一指向当前域名，避免更新弹窗显示过期域名。
+const PUBLIC_ORIGIN = 'https://k.wotty.app';
 let cache = null;
 const downloadTasks = new Map();
 
-function versionResponse(value, req) {
-  const origin = getPublicOrigin(req);
+function versionResponse(value) {
+  const origin = getPublicOrigin();
   return {
     latest_version: value.latest_version,
     latest_version_code: value.latest_version_code,
@@ -72,12 +73,8 @@ function safeAssetName(name) {
   return path.basename(name).replace(/[^A-Za-z0-9._-]/g, '-');
 }
 
-function getPublicOrigin(req) {
-  const host = String(req.headers.host || '').split(':')[0].toLowerCase();
-  if (host === 'kotier.openstars.org') {
-    return OLD_ORIGIN;
-  }
-  return DEFAULT_ORIGIN;
+function getPublicOrigin() {
+  return PUBLIC_ORIGIN;
 }
 
 function getLatestReleaseInfo() {
@@ -191,7 +188,7 @@ async function ensureCached(apk) {
 async function buildVersionInfo(req) {
   const { release, apk, filename, versionCode } = await getLatestReleaseInfo();
   await ensureCached(apk);
-  const origin = getPublicOrigin(req);
+  const origin = getPublicOrigin();
   const downloadUrl = `${origin}/download/${encodeURIComponent(filename)}`;
   return {
     latest_version: String(release.tag_name).replace(/^v/i, ''),
@@ -212,7 +209,7 @@ function buildCompactReleaseNotes(downloadUrl) {
     '- 更换 Kotier 图标。',
     '- 节点列表支持三点菜单，可单独选择设备图标。',
     '- 更新弹窗提供下载入口。',
-    '- 项目网站：https://kotier.wotty.app',
+    '- 项目网站：https://k.wotty.app',
     '- 使用正式签名并改进更新识别与缓存。',
     '',
     '如果遇到签名不一致，请手动下载安装包并更新。',
@@ -346,7 +343,7 @@ async function handleDownload(req, res, filename) {
 async function handleVersion(req, res) {
   const now = Date.now();
   if (cache && now - cache.time < CACHE_TTL_MS) {
-    sendJson(res, 200, versionResponse(cache.value, req));
+    sendJson(res, 200, versionResponse(cache.value));
     return;
   }
   try {
@@ -357,7 +354,7 @@ async function handleVersion(req, res) {
   } catch (error) {
     console.error(error.message);
     if (cache) {
-      sendJson(res, 200, versionResponse(cache.value, req));
+      sendJson(res, 200, versionResponse(cache.value));
       return;
     }
     sendJson(res, 503, { error: '暂时无法获取 GitHub Release 更新信息' });
