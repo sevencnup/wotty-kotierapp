@@ -46,3 +46,16 @@
 1. 调整紧凑版 `release_notes`，首行输出项目网站，删除列表中的重复网站项。
 2. 进行 Node.js 语法检查并部署 4.2.45 兼容更新 API。
 3. 请求历史兼容入口的 `/version.json`，确认项目网站置顶、无重复网站项且下载 URL 保持不变。
+
+## 新域名启用与旧网站跳转（2026-09-16）
+
+### 目标
+
+在 `k.wotty.app` 的 DNS 解析生效后签发 HTTPS 证书，并将 `kotier.openstars.org` 的网站主页跳转到新域名；保留 `/version.json` 与 `/download/` 的旧客户端兼容服务。
+
+### 实施与验证
+
+1. 查询多个公共 DNS，确认 `k.wotty.app` 已解析至香港源站。
+2. 为 `k.wotty.app` 配置 TLS 反向代理至现有 Kotier Web 服务。
+3. 将旧域名的主页请求重定向至新域名，但不改变更新检查和 APK 下载路径。
+4. 验证新域名 HTTPS、旧主页跳转、历史更新 API 和 APK 下载路径。
