@@ -195,21 +195,20 @@ async function buildVersionInfo(req) {
     latest_version_code: versionCode,
     download_url: downloadUrl,
     source_download_url: apk.browser_download_url,
-    // 4245 客户端只读取前 500 个字符，下载地址必须放在最前面。
+    // 4245 客户端只读取前 500 个字符，项目网站必须放在最前面。
     // 使用纯文本 URL，旧版客户端没有 Markdown 链接点击处理，但用户可以直接复制。
-    release_notes: buildCompactReleaseNotes(downloadUrl),
+    release_notes: buildCompactReleaseNotes(),
   };
 }
 
-function buildCompactReleaseNotes(downloadUrl) {
+function buildCompactReleaseNotes() {
   return [
-    `下载地址：${downloadUrl}`,
+    '项目网站：https://k.wotty.app',
     '',
     '本次更新：',
     '- 更换 Kotier 图标。',
     '- 节点列表支持三点菜单，可单独选择设备图标。',
     '- 更新弹窗提供下载入口。',
-    '- 项目网站：https://k.wotty.app',
     '- 使用正式签名并改进更新识别与缓存。',
     '',
     '如果遇到签名不一致，请手动下载安装包并更新。',
