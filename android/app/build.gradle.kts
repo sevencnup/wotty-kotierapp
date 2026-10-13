@@ -1,6 +1,43 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+val signingPropertiesFile = rootProject.file("keystore.properties")
+val signingProperties = Properties().apply {
+    if (signingPropertiesFile.isFile) {
+        FileInputStream(signingPropertiesFile).use(::load)
+    }
+}
+
+fun signingValue(propertyName: String, environmentName: String): String? =
+    System.getenv(environmentName)?.takeIf { it.isNotBlank() }
+        ?: signingProperties.getProperty(propertyName)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingValue("storeFile", "KOTIER_RELEASE_STORE_FILE")
+val releaseStorePassword = signingValue("storePassword", "KOTIER_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias", "KOTIER_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword", "KOTIER_RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { it != null }
+
+val requestedTasks = gradle.startParameter.taskNames.map { it.substringAfterLast(':') }
+val requiresReleaseSigning = requestedTasks.any { task ->
+    task in setOf("assemble", "build", "bundle") ||
+        (task.contains("release", ignoreCase = true) &&
+            listOf("assemble", "package", "bundle", "install").any(task::startsWith))
+}
+if (requiresReleaseSigning && !hasReleaseSigning) {
+    throw GradleException(
+        "Release signing is not configured. Provide android/keystore.properties or KOTIER_RELEASE_* environment variables."
+    )
 }
 
 val appVersionCode = 4070
@@ -51,7 +88,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.create("kotierRelease").apply {
+                    storeFile = rootProject.file(releaseStoreFile!!)
+                    storePassword = releaseStorePassword
+                    keyAlias = releaseKeyAlias
+                    keyPassword = releaseKeyPassword
+                }
+            }
         }
     }
 }
