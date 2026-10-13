@@ -15,6 +15,7 @@ import java.net.URL
 
 data class UpdateInfo(
     val latestVersion: String,
+    val latestVersionCode: Int,
     val downloadUrl: String,
     val releaseNotes: String,
 )
@@ -24,7 +25,7 @@ class UpdateChecker(private val context: Context) {
     companion object {
         private const val TAG = "UpdateChecker"
         private const val VERSION_CHECK_API =
-            "https://kotier.openstars.org/version.json"
+            "https://k.wotty.app/version.json"
         private const val TIMEOUT = 15_000
         private const val DOWNLOAD_TIMEOUT = 120_000
     }
@@ -60,10 +61,20 @@ class UpdateChecker(private val context: Context) {
             val downloadUrl = json.optString("download_url", "").takeIf { it.isNotBlank() }
                 ?: return@withContext Result.Unavailable("未找到下载链接")
 
+            val latestVersionCode = json.optInt("latest_version_code", 0)
             val currentVersion = com.easytier.BuildConfig.VERSION_NAME
-            Log.d(TAG, "最新版本: $latestVersion, 当前版本: $currentVersion, 下载地址: $downloadUrl")
+            val currentVersionCode = com.easytier.BuildConfig.VERSION_CODE
+            Log.d(
+                TAG,
+                "最新版本: $latestVersion ($latestVersionCode), 当前版本: $currentVersion ($currentVersionCode), 下载地址: $downloadUrl"
+            )
 
-            if (compareVersions(latestVersion, currentVersion) <= 0) {
+            val hasUpdate = if (latestVersionCode > 0) {
+                latestVersionCode > currentVersionCode
+            } else {
+                compareVersions(latestVersion, currentVersion) > 0
+            }
+            if (!hasUpdate) {
                 return@withContext Result.Unavailable("已是最新版本 ($currentVersion)")
             }
 
@@ -72,6 +83,7 @@ class UpdateChecker(private val context: Context) {
             Result.Available(
                 UpdateInfo(
                     latestVersion = latestVersion,
+                    latestVersionCode = latestVersionCode,
                     downloadUrl = downloadUrl,
                     releaseNotes = releaseNotes,
                 )
@@ -87,7 +99,7 @@ class UpdateChecker(private val context: Context) {
             try {
                 val dir = File(context.externalCacheDir, "updates")
                 dir.mkdirs()
-                val file = File(dir, "kotier-v${info.latestVersion}.apk")
+                val file = File(dir, "kotier-v${info.latestVersion}-${info.latestVersionCode}.apk")
                 // 已下载过直接安装
                 if (file.exists()) {
                     installApk(file)

@@ -84,7 +84,11 @@ fun SettingsPage(onNavigateToLog: (() -> Unit)? = null) {
     if (showUpdateDialog && updateInfo != null) {
         val info = updateInfo!!
         AppDialog(
-            title = "发现新版本 v${info.latestVersion}",
+            title = if (info.latestVersionCode > 0) {
+                "发现新版本 v${info.latestVersion} (${info.latestVersionCode})"
+            } else {
+                "发现新版本 v${info.latestVersion}"
+            },
             onDismissRequest = { showUpdateDialog = false },
             confirmText = if (isDownloading) "下载中 ${downloadProgress}%" else "下载更新",
             confirmEnabled = !isDownloading,
@@ -205,12 +209,12 @@ fun SettingsPage(onNavigateToLog: (() -> Unit)? = null) {
                 HorizontalDivider()
                 ListItem(
                     headlineContent = { Text("项目网站", fontSize = 13.sp) },
-                    supportingContent = { Text("kotier.openstars.org", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    supportingContent = { Text("k.wotty.app", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     trailingContent = { AppIcon(AppIcons.ChevronRight, contentDescription = null) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://kotier.openstars.org"))
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://k.wotty.app"))
                             context.startActivity(intent)
                         }
                 )
