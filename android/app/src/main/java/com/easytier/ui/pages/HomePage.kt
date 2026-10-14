@@ -230,57 +230,58 @@ fun HomePage() {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding(),
+                modifier = Modifier.fillMaxWidth(),
                 color = bottomBarColor,
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp,
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .padding(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    navItems.forEachIndexed { index, item ->
-                        val selected = selectedIndex == index
-                        val tint = if (selected) colorScheme.primary else colorScheme.onSurfaceVariant
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                ) {
-                                    showLogPage = false
-                                    selectedIndex = index
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp)
+                            .padding(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        navItems.forEachIndexed { index, item ->
+                            val selected = selectedIndex == index
+                            val tint = if (selected) colorScheme.primary else colorScheme.onSurfaceVariant
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                    ) {
+                                        showLogPage = false
+                                        selectedIndex = index
+                                    },
+                                contentAlignment = Alignment.Center,
                             ) {
-                                Icon(
-                                    painter = painterResource(id = item.iconRes),
-                                    contentDescription = item.label,
-                                    tint = tint,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = item.label,
-                                    fontSize = 11.sp,
-                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                                    color = tint,
-                                )
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = item.iconRes),
+                                        contentDescription = item.label,
+                                        tint = tint,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = item.label,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                                        color = tint,
+                                    )
+                                }
                             }
                         }
                     }
+                    Spacer(Modifier.navigationBarsPadding())
                 }
             }
         },
@@ -507,6 +508,34 @@ private fun DashboardScreen(
             EasyTierService.refreshRuntimeState()
             switchingInstance = null
         }
+    }
+
+    fun pinCurrentVirtualIp(cfg: NetworkConfig, virtualIp: String) {
+        val normalizedIp = NetworkConfig.vpnIpv4Address(virtualIp)
+        if (normalizedIp.isBlank()) {
+            Toast.makeText(context, "尚未获取到本机虚拟 IP", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val updatedConfigs = sanitizeDashboardConfigs(repo.loadNetworkConfigs())
+        val targetConfig = updatedConfigs.firstOrNull { it.instanceName == cfg.instanceName } ?: return
+        targetConfig.dhcp = false
+        targetConfig.ipv4 = NetworkConfig.normalizeStaticIpv4(normalizedIp)
+        repo.saveNetworkConfigs(updatedConfigs)
+        configs = updatedConfigs
+        LogService.info("已固定节点 ${cfg.instanceName} 的虚拟 IP: $normalizedIp", source = "HomePage")
+        Toast.makeText(context, "已固定 $normalizedIp，下次启动生效；请确保该地址未被占用", Toast.LENGTH_LONG).show()
+    }
+
+    fun restoreConfigDhcp(cfg: NetworkConfig) {
+        val updatedConfigs = sanitizeDashboardConfigs(repo.loadNetworkConfigs())
+        val targetConfig = updatedConfigs.firstOrNull { it.instanceName == cfg.instanceName } ?: return
+        targetConfig.dhcp = true
+        targetConfig.ipv4 = ""
+        repo.saveNetworkConfigs(updatedConfigs)
+        configs = updatedConfigs
+        LogService.info("已恢复节点 ${cfg.instanceName} 的 DHCP 自动分配", source = "HomePage")
+        Toast.makeText(context, "已恢复 DHCP 自动分配，下次启动生效", Toast.LENGTH_SHORT).show()
     }
 
     val localNode = nodes.firstOrNull { it.isLocal }
@@ -1239,7 +1268,14 @@ private fun DashboardScreen(
                                 config = cfg,
                                 isRunning = isCfgRunning,
                                 peerCount = peerCount,
+                                currentVirtualIp = if (isCfgRunning && cfg.instanceName == activeConfig?.instanceName) {
+                                    localNode?.virtualIp?.takeIf { it.isNotBlank() }
+                                } else {
+                                    null
+                                },
                                 onStart = { startConfig(cfg) },
+                                onPinCurrentIp = { ip -> pinCurrentVirtualIp(cfg, ip) },
+                                onRestoreDhcp = { restoreConfigDhcp(cfg) },
                                 onEdit = {
                                     editingConfigInstanceName = cfg.instanceName
                                     showNetworkConfigDialog = true
@@ -1514,7 +1550,10 @@ private fun DeviceRow(
 private fun ConfigRow(
     config: NetworkConfig,
     isRunning: Boolean,
+    currentVirtualIp: String?,
     onStart: () -> Unit,
+    onPinCurrentIp: (String) -> Unit,
+    onRestoreDhcp: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     enabled: Boolean = true,
@@ -1522,6 +1561,7 @@ private fun ConfigRow(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val isFixedIp = !config.dhcp && config.ipv4.isNotBlank()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1579,6 +1619,15 @@ private fun ConfigRow(
                     onClick = {
                         menuExpanded = false
                         onEdit()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(if (isFixedIp) "恢复 DHCP" else "固定此 IP") },
+                    enabled = isFixedIp || (isRunning && !currentVirtualIp.isNullOrBlank()),
+                    onClick = {
+                        menuExpanded = false
+                        if (isFixedIp) onRestoreDhcp()
+                        else currentVirtualIp?.let(onPinCurrentIp)
                     },
                 )
                 DropdownMenuItem(
