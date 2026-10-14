@@ -293,7 +293,7 @@ fun HomePage() {
             color = background,
         ) {
             when {
-                showLogPage -> Column(Modifier.statusBarsPadding()) { LogPage(onBack = { showLogPage = false }) }
+                showLogPage -> LogPage(onBack = { showLogPage = false })
                 else -> stateHolder.SaveableStateProvider("tab_$selectedIndex") {
                     when (selectedIndex) {
                         0 -> DashboardScreen(
@@ -301,9 +301,9 @@ fun HomePage() {
                             onOpenServers = { selectedIndex = 2 },
                         )
 
-                        1 -> Column(Modifier.statusBarsPadding()) { OneClickPage() }
-                        2 -> Column(Modifier.statusBarsPadding()) { ServersPage() }
-                        3 -> Column(Modifier.statusBarsPadding()) { SettingsPage(onNavigateToLog = { showLogPage = true }) }
+                        1 -> OneClickPage()
+                        2 -> ServersPage()
+                        3 -> SettingsPage(onNavigateToLog = { showLogPage = true })
                     }
                 }
             }
