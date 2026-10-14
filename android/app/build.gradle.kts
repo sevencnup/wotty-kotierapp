@@ -41,7 +41,7 @@ if (requiresReleaseSigning && !hasReleaseSigning) {
 }
 
 val appVersionCode = 4070
-val appVersionName = "4.2.48"
+val appVersionName = "4.2.47"
 
 base {
     archivesName.set("kotier-v${appVersionName}-${appVersionCode}")
