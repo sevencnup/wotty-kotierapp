@@ -3,6 +3,7 @@ android/.gradle/
 android/app/build/
 android/local.properties
 android/keystore.properties
+android/kotier-release.jks
 android_backup/.gradle/
 android_backup/app/build/
 android_backup/local.properties
@@ -24,3 +25,5 @@ build
 node_modules
 .claude
 8.9
+
+EasyTier-main

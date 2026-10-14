@@ -15,7 +15,7 @@ import java.net.URL
 
 data class UpdateInfo(
     val latestVersion: String,
-    val latestVersionCode: Int,
+    val latestVersionCode: Int?,
     val downloadUrl: String,
     val releaseNotes: String,
 )
@@ -26,6 +26,8 @@ class UpdateChecker(private val context: Context) {
         private const val TAG = "UpdateChecker"
         private const val VERSION_CHECK_API =
             "https://k.wotty.app/version.json"
+        private const val MANUAL_DOWNLOAD_NOTE =
+            "如果遇到签名不一致，请手动下载安装包并更新。"
         private const val TIMEOUT = 15_000
         private const val DOWNLOAD_TIMEOUT = 120_000
     }
@@ -61,7 +63,7 @@ class UpdateChecker(private val context: Context) {
             val downloadUrl = json.optString("download_url", "").takeIf { it.isNotBlank() }
                 ?: return@withContext Result.Unavailable("未找到下载链接")
 
-            val latestVersionCode = json.optInt("latest_version_code", 0)
+            val latestVersionCode = json.optInt("latest_version_code", -1).takeIf { it >= 0 }
             val currentVersion = com.easytier.BuildConfig.VERSION_NAME
             val currentVersionCode = com.easytier.BuildConfig.VERSION_CODE
             Log.d(
@@ -69,16 +71,23 @@ class UpdateChecker(private val context: Context) {
                 "最新版本: $latestVersion ($latestVersionCode), 当前版本: $currentVersion ($currentVersionCode), 下载地址: $downloadUrl"
             )
 
-            val hasUpdate = if (latestVersionCode > 0) {
-                latestVersionCode > currentVersionCode
-            } else {
-                compareVersions(latestVersion, currentVersion) > 0
-            }
-            if (!hasUpdate) {
+            val versionComparison = compareVersions(latestVersion, currentVersion)
+            val isSameVersionCodeNewer =
+                versionComparison == 0 && latestVersionCode != null && latestVersionCode > currentVersionCode
+            if (versionComparison < 0 || (versionComparison == 0 && !isSameVersionCodeNewer)) {
                 return@withContext Result.Unavailable("已是最新版本 ($currentVersion)")
             }
 
-            val releaseNotes = json.optString("release_notes", "").take(500)
+            val releaseNotes = buildString {
+                val notes = sanitizeReleaseNotes(json.optString("release_notes", ""))
+                if (notes.isNotEmpty()) {
+                    append(notes)
+                    append("\n\n")
+                }
+                if (!notes.contains(MANUAL_DOWNLOAD_NOTE)) {
+                    append(MANUAL_DOWNLOAD_NOTE)
+                }
+            }
 
             Result.Available(
                 UpdateInfo(
@@ -99,7 +108,8 @@ class UpdateChecker(private val context: Context) {
             try {
                 val dir = File(context.externalCacheDir, "updates")
                 dir.mkdirs()
-                val file = File(dir, "kotier-v${info.latestVersion}-${info.latestVersionCode}.apk")
+                val versionCodeSuffix = info.latestVersionCode?.let { "-$it" } ?: ""
+                val file = File(dir, "kotier-v${info.latestVersion}${versionCodeSuffix}.apk")
                 // 已下载过直接安装
                 if (file.exists()) {
                     installApk(file)
@@ -162,6 +172,19 @@ class UpdateChecker(private val context: Context) {
             Log.e(TAG, "启动安装界面失败", e)
         }
     }
+
+    private fun sanitizeReleaseNotes(value: String): String =
+        value
+            .lineSequence()
+            .filterNot { line ->
+                line.trim()
+                    .removePrefix("-")
+                    .trimStart()
+                    .let { it.startsWith("安装包：") || it.startsWith("安装包:") }
+            }
+            .joinToString("\n")
+            .replace(Regex("\n{3,}"), "\n\n")
+            .trim()
 
     private fun compareVersions(v1: String, v2: String): Int {
         val parts1 = v1.split(".").map { it.toIntOrNull() ?: 0 }
