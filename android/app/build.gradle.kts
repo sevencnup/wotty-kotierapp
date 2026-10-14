@@ -1,6 +1,11 @@
 import java.io.FileInputStream
 import java.util.Properties
 
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+
 val signingPropertiesFile = rootProject.file("keystore.properties")
 val signingProperties = Properties().apply {
     if (signingPropertiesFile.isFile) {
@@ -23,13 +28,20 @@ val hasReleaseSigning = listOf(
     releaseKeyPassword,
 ).all { it != null }
 
-plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+val requestedTasks = gradle.startParameter.taskNames.map { it.substringAfterLast(':') }
+val requiresReleaseSigning = requestedTasks.any { task ->
+    task in setOf("assemble", "build", "bundle") ||
+        (task.contains("release", ignoreCase = true) &&
+            listOf("assemble", "package", "bundle", "install").any(task::startsWith))
+}
+if (requiresReleaseSigning && !hasReleaseSigning) {
+    throw GradleException(
+        "Release signing is not configured. Provide android/keystore.properties or KOTIER_RELEASE_* environment variables."
+    )
 }
 
-val appVersionCode = 4069
-val appVersionName = "4.2.47"
+val appVersionCode = 4071
+val appVersionName = "4.2.49"
 
 base {
     archivesName.set("kotier-v${appVersionName}-${appVersionCode}")
@@ -76,16 +88,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (!hasReleaseSigning) {
-                throw GradleException(
-                    "Release signing is not configured. Provide android/keystore.properties or KOTIER_RELEASE_* environment variables."
-                )
-            }
-            signingConfig = signingConfigs.create("release").apply {
-                storeFile = rootProject.file(releaseStoreFile!!)
-                storePassword = releaseStorePassword
-                keyAlias = releaseKeyAlias
-                keyPassword = releaseKeyPassword
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.create("kotierRelease").apply {
+                    storeFile = rootProject.file(releaseStoreFile!!)
+                    storePassword = releaseStorePassword
+                    keyAlias = releaseKeyAlias
+                    keyPassword = releaseKeyPassword
+                }
             }
         }
     }

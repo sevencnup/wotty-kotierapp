@@ -25,7 +25,7 @@ class UpdateChecker(private val context: Context) {
     companion object {
         private const val TAG = "UpdateChecker"
         private const val VERSION_CHECK_API =
-            "https://kotier.wotty.app/version.json"
+            "https://k.wotty.app/version.json"
         private const val MANUAL_DOWNLOAD_NOTE =
             "如果遇到签名不一致，请手动下载安装包并更新。"
         private const val TIMEOUT = 15_000

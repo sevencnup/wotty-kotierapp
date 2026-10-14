@@ -1044,14 +1044,42 @@ fun NetworkConfigPage() {
                 // 节点监控
                 if (isRunning) {
                     val localNode = nodes.firstOrNull { it.isLocal }
+                    val currentConfig = configs.getOrNull(selectedIndex)
 
                     DirectConnectCard(
                         node = localNode,
+                        isFixedIp = currentConfig?.let { !it.dhcp && it.ipv4.isNotBlank() } == true,
+                        fixedIp = currentConfig?.takeIf { !it.dhcp }?.ipv4.orEmpty(),
                         onCopyIp = {
                             localNode?.virtualIp?.takeIf { it.isNotBlank() }?.let(::copyVirtualIp)
                         },
                         onShareIp = {
                             localNode?.takeIf { it.virtualIp.isNotBlank() }?.let(::shareVirtualIp)
+                        },
+                        onPinIp = { ip ->
+                            val virtualIp = NetworkConfig.vpnIpv4Address(ip)
+                            if (virtualIp.isNotBlank()) {
+                                updateSelectedConfig { config ->
+                                    config.dhcp = false
+                                    config.ipv4 = virtualIp
+                                }
+                                dhcpEnabled = false
+                                ipv4Text = virtualIp
+                                forceRecompose()
+                                LogService.info("已固定本机虚拟 IP: $virtualIp", source = "NetworkConfig")
+                                showToast("已固定 $virtualIp，下次启动生效；请确保该地址未被占用")
+                            }
+                        },
+                        onRestoreDhcp = {
+                            updateSelectedConfig { config ->
+                                config.dhcp = true
+                                config.ipv4 = ""
+                            }
+                            dhcpEnabled = true
+                            ipv4Text = ""
+                            forceRecompose()
+                            LogService.info("已恢复本机虚拟 IP 自动分配", source = "NetworkConfig")
+                            showToast("已恢复自动分配，下次启动生效")
                         }
                     )
 
@@ -1116,8 +1144,12 @@ private fun CustomSwitch(label: String, hint: String, value: Boolean, onChanged:
 @Composable
 private fun DirectConnectCard(
     node: NodeInfo?,
+    isFixedIp: Boolean,
+    fixedIp: String,
     onCopyIp: () -> Unit,
-    onShareIp: () -> Unit
+    onShareIp: () -> Unit,
+    onPinIp: (String) -> Unit,
+    onRestoreDhcp: () -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -1179,8 +1211,34 @@ private fun DirectConnectCard(
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            if (isFixedIp) "固定 IP：${NetworkConfig.vpnIpv4Address(fixedIp)}" else "当前由 DHCP 自动分配",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "更改下次启动生效；固定地址需确保未被其他节点占用。",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    TextButton(
+                        onClick = {
+                            if (isFixedIp) onRestoreDhcp()
+                            else node?.virtualIp?.takeIf { it.isNotBlank() }?.let(onPinIp)
+                        },
+                        enabled = isFixedIp || !node?.virtualIp.isNullOrBlank()
+                    ) {
+                        Text(if (isFixedIp) "恢复 DHCP" else "固定此 IP")
+                    }
+                }
             }
         }
     }
 }
-

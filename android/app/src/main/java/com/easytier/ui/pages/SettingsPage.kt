@@ -385,12 +385,12 @@ fun SettingsPage(onNavigateToLog: (() -> Unit)? = null) {
                 HorizontalDivider()
                 ListItem(
                     headlineContent = { Text("项目网站", fontSize = 13.sp) },
-                    supportingContent = { Text("kotier.wotty.app", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    supportingContent = { Text("k.wotty.app", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     trailingContent = { AppIcon(AppIcons.ChevronRight, contentDescription = null) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://kotier.wotty.app"))
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://k.wotty.app"))
                             context.startActivity(intent)
                         }
                 )
