@@ -40,7 +40,7 @@ if (requiresReleaseSigning && !hasReleaseSigning) {
     )
 }
 
-val appVersionCode = 4070
+val appVersionCode = 4069
 val appVersionName = "4.2.47"
 
 base {
